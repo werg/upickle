@@ -144,6 +144,79 @@ object TagName{
   implicit val quxRw: TagNamePickler.ReadWriter[Qux] = TagNamePickler.macroRW
   implicit val fooRw: TagNamePickler.ReadWriter[Foo] = TagNamePickler.macroRW
 }
+
+object Flatten {
+  case class FlattenTest(i: Int, s: String, @upickle.implicits.flatten n: Nested, @upickle.implicits.flatten n2: Nested2)
+
+  object FlattenTest {
+    implicit val rw: RW[FlattenTest] = upickle.default.macroRW
+  }
+
+  case class Nested(d: Double, @upickle.implicits.flatten m: Map[String, Int])
+
+  object Nested {
+    implicit val rw: RW[Nested] = upickle.default.macroRW
+  }
+
+  case class Nested2(name: String)
+
+  object Nested2 {
+    implicit val rw: RW[Nested2] = upickle.default.macroRW
+  }
+
+  case class FlattenTestWithType[T](i: Int, @upickle.implicits.flatten t: T)
+
+  object FlattenTestWithType {
+    implicit val rw: RW[FlattenTestWithType[Nested]] = upickle.default.macroRW
+  }
+
+  case class InnerMost(a: String, b: Int)
+
+  object InnerMost {
+    implicit val rw: RW[InnerMost] = upickle.default.macroRW
+  }
+
+  case class Inner(@upickle.implicits.flatten innerMost: InnerMost, c: Boolean)
+
+  object Inner {
+    implicit val rw: RW[Inner] = upickle.default.macroRW
+  }
+
+  case class Outer(d: Double, @upickle.implicits.flatten inner: Inner)
+
+  object Outer {
+    implicit val rw: RW[Outer] = upickle.default.macroRW
+  }
+
+  case class HasMap(@upickle.implicits.flatten map: Map[String, String], i: Int)
+  object HasMap {
+    implicit val rw: RW[HasMap] = upickle.default.macroRW
+  }
+
+  case class FlattenWithDefault(i: Int, @upickle.implicits.flatten n: NestedWithDefault)
+  object FlattenWithDefault {
+    implicit val rw: RW[FlattenWithDefault] = upickle.default.macroRW
+  }
+  case class NestedWithDefault(k: Int = 100, l: String)
+  object NestedWithDefault {
+    implicit val rw: RW[NestedWithDefault] = upickle.default.macroRW
+  }
+
+  case class FlattenSeq(@upickle.implicits.flatten n: Seq[(String, Int)])
+  object FlattenSeq {
+    implicit val rw: RW[FlattenSeq] = upickle.default.macroRW
+  }
+
+  case class ValueClass(value: Double)
+  object ValueClass {
+     implicit val rw: RW[ValueClass] = upickle.default.macroRW
+   }
+  case class Collection(@upickle.implicits.flatten n: scala.collection.mutable.LinkedHashMap[String, ValueClass])
+  object Collection {
+    implicit val rw: RW[Collection] = upickle.default.macroRW
+  }
+}
+
 object MacroTests extends TestSuite {
 
   // Doesn't work :(
@@ -838,7 +911,6 @@ object MacroTests extends TestSuite {
 
       val customPicklerTest = new TestUtil(customPickler)
 
-      implicit def rwA: customPickler.ReadWriter[upickle.Hierarchy.A] = customPickler.macroRW
       implicit def rwB: customPickler.ReadWriter[upickle.Hierarchy.B] = customPickler.macroRW
       implicit def rwC: customPickler.ReadWriter[upickle.Hierarchy.C] = customPickler.macroRW
 
@@ -881,5 +953,54 @@ object MacroTests extends TestSuite {
     test("sealedClass"){
       assert(write(SealedClass(3, "Hello")) == """{"$type":"SealedClass","i":3,"s":"Hello"}""")
     }
+
+    test("flatten"){
+      import Flatten._
+      val a = FlattenTest(10, "test", Nested(3.0, Map("one" -> 1, "two" -> 2)), Nested2("hello"))
+      rw(a, """{"i":10,"s":"test","d":3,"one":1,"two":2,"name":"hello"}""")
+    }
+
+    test("flattenTypeParam"){
+      import Flatten._
+      val a = FlattenTestWithType[Nested](10, Nested(5.0, Map("one" -> 1, "two" -> 2)))
+      rw(a, """{"i":10,"d":5,"one":1,"two":2}""")
+    }
+
+    test("nestedFlatten") {
+      import Flatten._
+      val value = Outer(1.1, Inner(InnerMost("test", 42), true))
+      rw(value, """{"d":1.1,"a":"test","b":42,"c":true}""")
+    }
+
+    test("flattenWithMap") {
+      import Flatten._
+      val value = HasMap(Map("key1" -> "value1", "key2" -> "value2"), 10)
+      rw(value, """{"key1":"value1","key2":"value2","i":10}""")
+    }
+
+    test("flattenEmptyMap") {
+      import Flatten._
+      val value = HasMap(Map.empty, 10)
+      rw(value, """{"i":10}""")
+      write(1)
+    }
+
+    test("flattenWithDefaults") {
+      import Flatten._
+      val value = FlattenWithDefault(10, NestedWithDefault(l = "default"))
+      rw(value, """{"i":10,"l":"default"}""")
+    }
+
+    test("flattenSeq") {
+      import Flatten._
+      val value = FlattenSeq(Seq("a" -> 1, "b" -> 2))
+      rw(value, """{"a":1,"b":2}""")
+    }
+
+     test("flattenLinkedHashMap") {
+       import Flatten._
+       val value = Collection(scala.collection.mutable.LinkedHashMap("a" -> ValueClass(3.0), "b" -> ValueClass(4.0)))
+       rw(value, """{"a":{"value":3},"b":{"value":4}}""")
+     }
   }
 }

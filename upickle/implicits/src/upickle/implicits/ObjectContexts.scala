@@ -21,7 +21,7 @@ abstract class CaseObjectContext[V](fieldCount: Int) extends ObjVisitor[Any, V] 
   var found = 0L
 
   def visitValue(v: Any, index: Int): Unit = {
-    if (currentIndex != -1 && ((found & (1L << currentIndex)) == 0)) {
+    if ((currentIndex != -1) && ((found & (1L << currentIndex)) == 0)) {
       storeAggregatedValue(currentIndex, v)
       found |= (1L << currentIndex)
     }
@@ -53,7 +53,7 @@ abstract class HugeCaseObjectContext[V](fieldCount: Int) extends ObjVisitor[Any,
   var found = new Array[Long](fieldCount / 64 + 1)
 
   def visitValue(v: Any, index: Int): Unit = {
-    if (currentIndex != -1 && ((found(currentIndex / 64) & (1L << currentIndex)) == 0)) {
+    if ((currentIndex != -1) && ((found(currentIndex / 64) & (1L << currentIndex)) == 0)) {
       storeAggregatedValue(currentIndex, v)
       found(currentIndex / 64) |= (1L << currentIndex)
     }

@@ -11,6 +11,11 @@ import language.higherKinds
 import language.existentials
 
 /**
+ * This file is deprecated and remained here for binary compatibility.
+ * Please use upickle/implicits/src-2/upickle/implicits/internal/Macros2.scala instead.
+ */
+
+/**
  * Implementation of macros used by uPickle to serialize and deserialize
  * case classes automatically. You probably shouldn't need to use these
  * directly, since they are called implicitly when trying to read/write
@@ -466,6 +471,8 @@ object Macros {
       q"${c.prefix}.Writer.merge[$targetType](..$subtree)"
     }
   }
+
+  @deprecated("Use Macros2 instead")
   def macroRImpl[T, R[_]](c0: scala.reflect.macros.blackbox.Context)
                          (implicit e1: c0.WeakTypeTag[T], e2: c0.WeakTypeTag[R[_]]): c0.Expr[R[T]] = {
     import c0.universe._
@@ -477,6 +484,7 @@ object Macros {
     c0.Expr[R[T]](res)
   }
 
+  @deprecated("Use Macros2 instead")
   def macroWImpl[T, W[_]](c0: scala.reflect.macros.blackbox.Context)
                          (implicit e1: c0.WeakTypeTag[T], e2: c0.WeakTypeTag[W[_]]): c0.Expr[W[T]] = {
     import c0.universe._
