@@ -74,8 +74,8 @@
 
   @sect{Getting Started}
     @hl.scala
-      "com.lihaoyi" %% "upickle" % "4.0.2" // SBT
-      ivy"com.lihaoyi::upickle:4.0.2" // Mill
+      "com.lihaoyi" %% "upickle" % "4.1.0" // SBT
+      ivy"com.lihaoyi::upickle:4.1.0" // Mill
 
     @p
       And then you can immediately start writing and reading common Scala
@@ -93,8 +93,8 @@
       @p
         For ScalaJS applications, use this dependencies instead:
       @hl.scala
-        "com.lihaoyi" %%% "upickle" % "4.0.2" // SBT
-        ivy"com.lihaoyi::upickle::4.0.2" // Mill
+        "com.lihaoyi" %%% "upickle" % "4.1.0" // SBT
+        ivy"com.lihaoyi::upickle::4.1.0" // Mill
 
     @sect{Scala Versions}
       @p
@@ -512,7 +512,105 @@
         follows:
 
       @hl.ref(exampleTests, Seq("stringLongs", ""))
+    @sect{@@flatten}
+      @p
+        The @hl.scala{@@flatten} annotation can only be applied to:
 
+      @ul
+        @li
+          @hl.scala{case class}es: Flatten fields of a nested case class into the parent structure.
+
+          @hl.scala
+            case class A(i: Int, @@flatten b: B)
+            case class B(msg: String)
+            implicit val rw: ReadWriter[A] = macroRW
+            implicit val rw: ReadWriter[B] = macroRW
+            write(A(1, B("Hello"))) // {"i":1, "msg": "Hello"}
+
+
+        @li
+          @hl.scala{Iterable}: Flatten key-value pairs of a @hl.scala{Iterable[(String, _)]} into the parent structure.
+        
+        
+          @hl.scala
+            case class A(i: Int, @@flatten map: Map[String, String])
+            implicit val rw: ReadWriter[A] = macroRW
+            val map = Map("a" -> "1", "b" -> "2")
+            write(A(1, map)) // {"i":1, "a":"1", "b": "2"}
+        
+        @li
+          @p
+        
+            Nested flattening allows you to apply the @hl.scala{@@flatten} annotation recursively to fields within nested case classes.
+          @hl.scala
+            case class Outer(msg: String, @@flatten inner: Inner)
+            case class Inner(@@flatten inner2: Inner2)
+            case class Inner2(i: Int)
+        
+            implicit val rw: ReadWriter[Inner2] = macroRW
+            implicit val rw: ReadWriter[Inner] = macroRW
+            implicit val rw: ReadWriter[Outer] = macroRW
+        
+            write(Outer("abc", Inner(Inner2(7)))) // {"msg": "abc", "i": 7}
+
+
+      @p
+        The Reader also recognizes the @hl.scala{@@flatten} annotation.
+      @hl.scala
+        case class A(i: Int, @@flatten b: B)
+        case class B(msg: String)
+        implicit val rw: ReadWriter[A] = macroRW
+        implicit val rw: ReadWriter[B] = macroRW
+        read("""{"i": 1, "msg": "Hello"}""")
+        // The top-level field "msg": "Hello" is correctly mapped to the field in B.
+     
+      @p
+        For collection, during deserialization, all key-value pairs in the JSON that do not directly map to a
+        specific field in the case class are attempted to be stored in the @hl.scala{Map}.
+     
+      @p
+        If a key in the JSON does not correspond to any field in the case class, it is stored in the collection.
+     
+      @hl.scala
+        case class A(i: Int, @@flatten Map[String, String])
+        implicit val rw: ReadWriter[A] = macroRW
+        read("""{"i":1, "a" -> "1", "b" -> "2"}""") // Output: A(1, Map("a" -> "1", "b" -> "2"))
+     
+      @p
+        If there are no keys in the JSON that can be stored in the collection, it is treated as an empty collection.
+     
+      @hl.scala
+        read("""{"i":1}""")
+        // Output: A(1, Map.empty)
+     
+      @p
+        If a key’s value in the JSON cannot be converted to the Map’s value type (e.g., @hl.scala{String}), the deserialization fails.
+      @hl.scala
+        read("""{"i":1, "a":{"name":"foo"}}""")
+        // Error: Failed to deserialize because the value for "a" is not a String, as required by Map[String, String].
+     
+     
+      @sect{Flatten Limitations}
+        @ol
+          @li
+            Flattening more than two collections to a same level is not supported.
+            Flattening multiple collections to a same level feels awkward to support because, when deriving
+             a @hl.scala{Reader}, it becomes unclear which collection the data should be stored in.
+          @li
+            Type parameters do not seem to be properly resolved in the following scenario:
+     
+            @hl.scala
+              case class Param[T](@@flatten t: T)
+              object Param {
+                // compile error when this function is called to derive instance
+                implicit def rw[T: RW]: RW[Param[T]] = upickle.default.macroRW
+                // works
+                implicit val rw[SomeClass]: RW[Param[SomeClass]] = upickle.default.macroRW
+              }
+          @li
+            When using the @hl.scala{@@flatten} annotation on a @hl.scala{Iterable}, the type
+            of key must be @hl.scala{String}.
+     
 
   @sect{Limitations}
 
@@ -915,6 +1013,12 @@
       JSON library, and inherits a lot of it's performance from Erik's work.
 
   @sect{Version History}
+    @sect{4.1.0}
+      @ul
+        @li
+          Introduction of the @sect.ref{@@flatten} annotation, to allow nested
+          @hl.scala{case class}es to be serialized into non-nested JSON dictionaries
+          @lnk("#642", "https://github.com/com-lihaoyi/upickle/pull/642")
     @sect{4.0.2}
       @ul
         @li
