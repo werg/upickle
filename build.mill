@@ -47,7 +47,7 @@ trait CommonPublishModule
 
   def publishVersion = VcsVersion.vcsState().format()
   def mimaReportBinaryIssues() =
-    if (this.isInstanceOf[ScalaNativeModule] || this.isInstanceOf[ScalaJSModule]) T.command()
+    if (this.isInstanceOf[ScalaNativeModule] || this.isInstanceOf[ScalaJSModule]) Task.Command()
     else super.mimaReportBinaryIssues()
 
   def mimaPreviousVersions = Seq(
