@@ -1028,6 +1028,11 @@
       JSON library, and inherits a lot of it's performance from Erik's work.
 
   @sect{Version History}
+    @sect{4.2.1}
+      @ul
+        @li
+          Fix crash when derive Reader for enum with @code{-Yexplicit-nulls}
+          @lnk("#667", "https://github.com/com-lihaoyi/upickle/pull/667")
     @sect{4.2.0}
       @ul
         @li
