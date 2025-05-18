@@ -1033,6 +1033,9 @@
         @li
           Fix crash when derive Reader for enum with @code{-Yexplicit-nulls}
           @lnk("#667", "https://github.com/com-lihaoyi/upickle/pull/667")
+        @li
+          Support for serializing Scala 3.7 named tuples as JSON dictionaries
+          @lnk("#662", "https://github.com/com-lihaoyi/upickle/pull/662")
 
     @sect{4.1.0}
       @ul
