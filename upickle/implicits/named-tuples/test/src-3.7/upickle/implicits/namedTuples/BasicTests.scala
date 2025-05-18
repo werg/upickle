@@ -2,13 +2,27 @@ package upickle.implicits.namedTuples
 import utest.*
 
 object BasicTests extends TestSuite {
-  val basic_formatted = """[
+  val expectedOutput = """[
     {"x":23,"y":7.5,"z":500000000000},
     {"name":"Alice","isHuman":true,"isAlien":false},
     {"arr":[1,2,3],"optionalAny":null,"optionalInt":42}
-  ]"""
+  ]""".replaceAll("\\s+", "")
 
   val tests = Tests {
+
+    test("example") {
+      import upickle.implicits.namedTuples.default.given
+
+      val namedTuple = (foo = Seq(1, 2, 3), bar = "hello", qux = Some(42))
+      val json = """{"foo":[1,2,3],"bar":"hello","qux":42}"""
+
+      assert(upickle.default.write(namedTuple) == json)
+
+      val deserialized =
+        upickle.default.read[(foo: Seq[Int], bar: String, qux:Option[Int])](json)
+
+      assert(deserialized == namedTuple)
+    }
 
     test("default cake") {
       test("serialization with primitives and option") {
@@ -20,7 +34,7 @@ object BasicTests extends TestSuite {
             (arr = (1, 2, 3), optionalAny = None, optionalInt = Some(42))
           )
         ) // named tuple write
-        assert(json == basic_formatted.replaceAll("\\s+", ""))
+        assert(json == expectedOutput)
       }
 
       test("deserialization with primitives, seq and option") {
@@ -35,7 +49,7 @@ object BasicTests extends TestSuite {
                   optionalInt: Option[Int]
               )
           )
-        ](basic_formatted)
+        ](expectedOutput)
 
         assert(
           result == (
@@ -62,7 +76,7 @@ object BasicTests extends TestSuite {
         )
 
         val json = upickle.default.write[Schema](data)(using rw)
-        assert(json == basic_formatted.replaceAll("\\s+", ""))
+        assert(json == expectedOutput)
         val result = upickle.default.read[Schema](json)(using rw)
         assert(result == data)
       }
@@ -97,7 +111,7 @@ object BasicTests extends TestSuite {
             (arr = (1, 2, 3), optionalAny = None, optionalInt = Some(42))
           )
         )
-        assert(json == basic_formatted.replaceAll("\\s+", ""))
+        assert(json == expectedOutput)
       }
 
       test("deserialization with primitives, seq and option [legacy]") {
@@ -112,7 +126,7 @@ object BasicTests extends TestSuite {
                   optionalInt: Option[Int]
               )
           )
-        ](basic_formatted)
+        ](expectedOutput)
 
         assert(
           result == (
@@ -139,7 +153,7 @@ object BasicTests extends TestSuite {
         )
 
         val json = upickle.legacy.write[Schema](data)(using rw)
-        assert(json == basic_formatted.replaceAll("\\s+", ""))
+        assert(json == expectedOutput)
         val result = upickle.legacy.read[Schema](json)(using rw)
         assert(result == data)
       }

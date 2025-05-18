@@ -228,20 +228,21 @@
           enough to dis-ambiguate them. This behavior can be overriden with the
           @hl.scala("""@key("...")""") annotation in both cases, if a different type key
           is desired.
-      @sect{Scala 3 Named Tuples}
+      @sect{Scala 3.7 Named Tuples}
         @p
           In Scala 3.7+, you can generate @code{ReadWriter}s for named tuple types.
           (first depend on the optional @code{upickle-implicits-named-tuples} module).
+          This requires an optional maven dependency and import that is only available
+          for Scala 3.7.0 and above:
+
+        @hl.scala
+          ivy"com.lihaoyi::upickle-implicits-named-tuples:4.1.0" // Mill build config
+
         @p
-          @b{Maven Coordinates}
+          You can read/write any named tuple value, as long as the fields can also be read/written,
+          and they are serialized as JSON dictionaries:
 
-          @hl.scala
-            ivy"com.lihaoyi::upickle-implicits-named-tuples:4.1.0" // Mill
-
-        @p
-          You can read/write any named tuple value, as long as the fields can also be read/written:
-
-          @hl.ref(namedTupleTests, "val json = upickle.default.write(", ") // named tuple write")
+          @hl.ref(namedTupleTests, Seq("test(\"example\")", ""))
 
     @sect{Read/Writing Other Things}
 
