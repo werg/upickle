@@ -68,7 +68,6 @@ object Common{
   ))
   val benchmarkSampleJson = upickle.default.write(benchmarkSampleData)
   val benchmarkSampleMsgPack = upickle.default.writeBinary(benchmarkSampleData)
-
   println("benchmarkSampleJson " + benchmarkSampleJson.size + " bytes")
   println("benchmarkSampleMsgPack " + benchmarkSampleMsgPack.size + " bytes")
 
@@ -296,7 +295,6 @@ object Common{
       upickle.default.writeBinary(_)
     )
   }
-
 //  def genCodecCached(duration: Int) = {
 //    import com.avsystem.commons.serialization._
 //
@@ -431,21 +429,25 @@ object Common{
     @nowarn("cat=deprecation")
     val groupedResults = allResults
       .map {
+        case (s"${n}ByteBuffer $rw", v) => (s"$n $rw", "JsonByteBuffer", v)
         case (s"${n}ByteArray $rw", v) => (s"$n $rw", "JsonByteArray", v)
+        case (s"${n}BinaryByteBuffer $rw", v) => (s"$n $rw", "MsgPackByteBuffer", v)
         case (s"${n}Binary $rw", v) => (s"$n $rw", "MsgPack", v)
         case (n, v) => (n, "JsonString", v)
       }
-      .groupMap { case (name, tag, v) => (name, tag) }(_._3).mapValues(_.sorted.apply(1 /* get the median of 3*/))
-      .groupMap { case ((name, tag), v) => name } { case ((name, tag), v) => (tag, v) }.mapValues(_.toMap)
+      .groupMap { case (name, tag, v) => (name, tag) }(_._3)
+      .view.mapValues(_.sorted.apply(1 /* get the median of 3*/)).toMap
+      .groupMap { case ((name, tag), v) => name } { case ((name, tag), v) => (tag, v) }
+      .view.mapValues(_.toMap).toMap
 
-    val tags = Seq("JsonString", "JsonByteArray", "MsgPack")
+    val tags = Seq("JsonString", "JsonByteArray", "JsonByteBuffer", "MsgPack", "MsgPackByteBuffer")
     val lines = Seq(
       "| Name | " + tags.mkString(" | ") + " |",
       "|---:| " + tags.map(_ => "---:").mkString(" | ") + " |"
     ) ++ (
       for ((name, taggedValues) <- groupedResults.toList.sortBy(t => allResults.map(_._1).indexOf(t._1)))
-      yield s"| $name | " + tags.map(taggedValues.getOrElse(_, " ")).mkString(" | ") + " |"
-    )
+        yield s"| $name | " + tags.map(taggedValues.getOrElse(_, " ")).mkString(" | ") + " |"
+      )
 
     lines.mkString("\n")
   }

@@ -424,7 +424,7 @@ trait BenchModule extends CommonPlatformModule{
 
 object bench extends Module {
   object js extends BenchModule with ScalaJSModule {
-    def scalaJSVersion = "1.13.0"
+    def scalaJSVersion = "1.16.0"
     def moduleDeps = Seq(upickle.js(scala213).test)
   }
 

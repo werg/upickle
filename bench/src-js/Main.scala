@@ -6,7 +6,21 @@ import upickle.Defaults.ADTc
 import upickle.Hierarchy.{A, B, C}
 import upickle.Recursive.{End, LL, Node}
 import scala.scalajs.js
+import scala.scalajs.js.typedarray._
+import scala.scalajs.js.annotation._
+
+@js.native
+@JSGlobal("TextDecoder") // Specifies the global JavaScript name
+class TextDecoder(label: String = "utf-8", options: js.UndefOr[js.Object] = js.undefined) extends js.Object {
+  def decode(input: js.typedarray.ArrayBuffer): String = js.native
+}
+
 object Main{
+  def arrayByteToArrayBuffer(array: Array[Byte]): ArrayBuffer = {
+    val a = new Int8Array(array.length)
+    a.set(array.toTypedArray)
+    a.buffer
+  }
   def main(args: Array[String]): Unit = {
     val allResults = collection.mutable.Buffer.empty[(String, Int)]
     for((duration, save) <- Seq(2500 -> false, 5000 -> false, 10000 -> true, 10000 -> true, 10000 -> true)){
@@ -37,7 +51,12 @@ object Main{
       val results = Seq(
         Common.upickleDefault(duration),
         Common.upickleDefaultByteArray(duration),
+        upickleDefaultByteBuffer(duration),
         Common.upickleDefaultBinary(duration),
+        upickleDefaultBinaryByteBuffer(duration),
+        upickleWebDefault(duration),
+        upickleWebByteBuffer(duration),
+
         Common.integers(duration),
         Common.integersByteArray(duration),
         Common.integersBinary(duration),
@@ -80,6 +99,39 @@ object Main{
       js.JSON.stringify(_)
     )
   }
+
+  def upickleDefaultByteBuffer(duration: Int) = {
+    val jsonByteBuffer = TypedArrayBuffer.wrap(arrayByteToArrayBuffer(Common.benchmarkSampleJson.getBytes()))
+    Common.bench0[java.nio.ByteBuffer, Seq[Data]](duration, jsonByteBuffer)(
+      upickle.default.read[Seq[Data]](_),
+      d => TypedArrayBuffer.wrap(arrayByteToArrayBuffer(upickle.default.write(d).getBytes()))
+    )
+  }
+
+  def upickleDefaultBinaryByteBuffer(duration: Int) = {
+    val msgPackByteBuffer = TypedArrayBuffer.wrap(arrayByteToArrayBuffer(Common.benchmarkSampleMsgPack))
+    Common.bench0[java.nio.ByteBuffer, Seq[Data]](duration, msgPackByteBuffer)(
+      upickle.default.readBinary[Seq[Data]](_),
+      d => TypedArrayBuffer.wrap(arrayByteToArrayBuffer(upickle.default.writeBinary(d)))
+    )
+  }
+
+  def arrayBufferToString(buffer: ArrayBuffer, encoding: String = "utf-8"): String = {
+    val decoder = new TextDecoder(encoding)
+    decoder.decode(buffer)
+  }
+
+  def upickleWebByteBuffer(duration: Int) = {
+    val jsonByteBuffer = arrayByteToArrayBuffer(Common.benchmarkSampleJson.getBytes())
+    Common.bench0[ArrayBuffer, Seq[Data]](duration, jsonByteBuffer)(
+      buf => {
+        val str = arrayBufferToString(buf, "utf-8")
+        upickle.default.web.read[Seq[Data]](str)
+      },
+      d => arrayByteToArrayBuffer(upickle.default.web.write(d).getBytes())
+    )
+  }
+
   def upickleWebDefault(duration: Int) = {
     import upickle.default.{ReadWriter => RW}
     implicit def rw1: RW[Data] = upickle.default.macroRW
